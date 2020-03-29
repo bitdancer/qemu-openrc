@@ -25,6 +25,7 @@ VM_NAME="${RC_SVCNAME#qemu.}"
 : ${vnc_listen:=0.0.0.0}
 : ${hugepages_path:=/dev/hugepages}
 : ${monitor_socket:=/run/qemu/${VM_NAME}/monitor.sock}
+: ${serial_socket:=/run/qemu/${VM_NAME}/serial.sock}
 : ${extra_args:=}
 
 name="VM $VM_NAME"
@@ -53,7 +54,8 @@ command_args="
 	-vga $vga
 	-device virtio-rng-pci
 	-device virtio-scsi-pci,id=scsi
-	-monitor unix:$monitor_socket,server,nowait"
+	-monitor unix:$monitor_socket,server,nowait
+	-serial unix:$serial_socket,server,nowait"
 command_background='yes'
 
 start_stop_daemon_args="
@@ -101,7 +103,7 @@ start_pre() {
 		einfo "Command: $command $(printf '%s ' $command_args)"
 	fi
 
-	local path; for path in "$pidfile" "$monitor_socket" "$logfile"; do
+	local path; for path in "$pidfile" "$monitor_socket" "$serial_socket" "$logfile"; do
 		# checkpath doesn't create intermediate directories
 		mkdir -p "$(dirname "$path")"
 		checkpath -d -m 0750 -o $user:$group "$(dirname "$path")"
@@ -113,6 +115,9 @@ start_pre() {
 start_post() {
 	ewaitfile 5 "$monitor_socket" || {
 		eerror 'Monitor socket has not been created!'; return 1
+	}
+	ewaitfile 5 "$serial_socket" || {
+		eerror 'Serial socket has not been created!'; return 1
 	}
 	if [ -n "$vnc_password" ]; then
 		qemush "set_password vnc $vnc_password" || eerror 'Failed to set VNC password!'
@@ -151,6 +156,7 @@ stop() {
 
 stop_post() {
 	[ -S "$monitor_socket" ] && rm -f "$monitor_socket"
+	[ -S "$serial_socket" ] && rm -f "$serial_socket"
 	[ -f "$pidfile" ] && rm -f "$pidfile"
 	return 0
 }

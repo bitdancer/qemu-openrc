@@ -94,6 +94,9 @@
 # Path of the QEMU monitor socket for this VM.
 #monitor_socket="/run/qemu/${VM_NAME}/monitor.sock"
 
+# Path of the QEMU serial socket for this VM.
+#serial_socket="/run/qemu/${VM_NAME}/serial.sock"
+
 
 ##
 # Network interfaces
